@@ -4,6 +4,7 @@
 import PackageDescription
 
 let package = Package(
+
     name: "SerialWatcherExample",
 
     dependencies: [
@@ -11,6 +12,7 @@ let package = Package(
 	],
 
     targets: [
-        .target(name: "SerialWatcherExample", dependencies: ["Serialport"]),
+        .target(name: "SerialWatcherExample", dependencies: ["SwiftSerialport"]),
     ]
+
 )
