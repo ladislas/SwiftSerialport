@@ -7,8 +7,6 @@
 
 import Foundation
 
-/// An object which observes USB devices added and removed from the system.
-/// Abstracts away most of the ugliness of IOKit APIs.
 public class SerialWatcher {
 
 	private weak var delegate: SerialWatcherDelegate?

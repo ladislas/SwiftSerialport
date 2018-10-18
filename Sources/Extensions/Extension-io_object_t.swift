@@ -25,7 +25,7 @@ public let kIOCFPlugInInterfaceID = CFUUIDGetConstantUUIDWithBytes(nil,
 
 extension io_object_t {
 
-	func name() -> String? {
+	public func name() -> String? {
 		let buf = UnsafeMutablePointer<io_name_t>.allocate(capacity: 1)
 		defer { buf.deallocate() }
 		return buf.withMemoryRebound(to: CChar.self, capacity: MemoryLayout<io_name_t>.size) {
@@ -36,7 +36,7 @@ extension io_object_t {
 		}
 	}
 
-	func getInfo(andOutput output: Bool = false) -> SerialDevice_t? {
+	public func getInfo(andOutput output: Bool = false) -> SerialDevice_t? {
 
 		var score: Int32 = 0
 		var kr: kern_return_t = 0
