@@ -26,4 +26,14 @@ private var serialWatcher: SerialWatcher!
 let example = Example()
 serialWatcher = SerialWatcher(delegate: example)
 
+serialWatcher.start()
+
+DispatchQueue.global(qos: .background).asyncAfter(deadline: .now() + .seconds(5), execute: {
+	serialWatcher.stop()
+})
+
+DispatchQueue.global(qos: .background).asyncAfter(deadline: .now() + .seconds(10), execute: {
+	serialWatcher.start()
+})
+
 RunLoop.main.run()

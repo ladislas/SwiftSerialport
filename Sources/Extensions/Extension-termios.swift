@@ -37,12 +37,12 @@ public extension termios {
 		}
 	}
 
-	var usesRTSCTSFlowControl: Bool {
+	var withRTSCTSFlowControl: Bool {
 		get {
 			return self.c_cflag & tcflag_t((CCTS_OFLOW | CRTS_IFLOW)) != 0
 		}
 		set {
-			if usesRTSCTSFlowControl {
+			if withRTSCTSFlowControl {
 				self.c_cflag |= tcflag_t((CCTS_OFLOW | CRTS_IFLOW))
 			} else {
 				self.c_cflag &= ~tcflag_t((CCTS_OFLOW | CRTS_IFLOW))
@@ -50,12 +50,12 @@ public extension termios {
 		}
 	}
 
-	var usesDTRDSRFlowControl: Bool {
+	var withDTRDSRFlowControl: Bool {
 		get {
 			return self.c_cflag & tcflag_t((CDTR_IFLOW | CDSR_OFLOW)) != 0
 		}
 		set {
-			if usesDTRDSRFlowControl {
+			if withDTRDSRFlowControl {
 				self.c_cflag |= tcflag_t((CDTR_IFLOW | CDSR_OFLOW))
 			} else {
 				self.c_cflag &= ~tcflag_t((CDTR_IFLOW | CDSR_OFLOW))
@@ -63,12 +63,12 @@ public extension termios {
 		}
 	}
 
-	var usesDCDOutputFlowControl: Bool {
+	var withDCDOutputFlowControl: Bool {
 		get {
 			return self.c_cflag & tcflag_t(CCAR_OFLOW) != 0
 		}
 		set {
-			if usesDCDOutputFlowControl {
+			if withDCDOutputFlowControl {
 				self.c_cflag |= tcflag_t(CCAR_OFLOW)
 			} else {
 				self.c_cflag &= ~tcflag_t(CCAR_OFLOW)

@@ -39,9 +39,10 @@ public struct SerialSettings {
 
 	let shouldEchoReceivedData: Bool
 
-	let usesRTSCTSFlowControl: Bool
-	let usesDTRDSRFlowControl: Bool
-	let usesDCDOutputFlowControl: Bool
+	let withRTSCTSFlowControl: Bool
+	let withDTRDSRFlowControl: Bool
+	let withDCDOutputFlowControl: Bool
+
 	var RTS: Bool
 	var DTR: Bool
 	var CTS: Bool
@@ -54,9 +55,9 @@ public struct SerialSettings {
 		 parity: SerialParity = .none,
 		 numberOfStopBits: SerialStopBits = .one,
 		 shouldEchoReceivedData: Bool = false,
-		 usesRTSCTSFlowControl: Bool = false,
-		 usesDTRDSRFlowControl: Bool = false,
-		 usesDCDOutputFlowControl: Bool = false,
+		 withRTSCTSFlowControl: Bool = false,
+		 withDTRDSRFlowControl: Bool = false,
+		 withDCDOutputFlowControl: Bool = false,
 		 RTS: Bool = false,
 		 DTR: Bool = false,
 		 CTS: Bool = false,
@@ -69,9 +70,9 @@ public struct SerialSettings {
 
 		self.shouldEchoReceivedData = shouldEchoReceivedData
 
-		self.usesRTSCTSFlowControl = usesRTSCTSFlowControl
-		self.usesDTRDSRFlowControl = usesDTRDSRFlowControl
-		self.usesDCDOutputFlowControl = usesDCDOutputFlowControl
+		self.withRTSCTSFlowControl = withRTSCTSFlowControl
+		self.withDTRDSRFlowControl = withDTRDSRFlowControl
+		self.withDCDOutputFlowControl = withDCDOutputFlowControl
 		self.RTS = RTS
 		self.DTR = DTR
 		self.CTS = CTS
@@ -82,23 +83,28 @@ public struct SerialSettings {
 
 	}
 
-//	let path: String
-//	let IOKitDevice: io_object_t
-//	let name: String
-//	let baudRate = Int(B115200)
-//	let allowsNonStandardBaudRates = false
-//	let numberOfStopBits = UInt(1)
-//	let shouldEchoReceivedData = false
-//	let parity: SerialParity = .none
-//	let usesRTSCTSFlowControl = false
-//	let usesDTRDSRFlowControl = false
-//	let usesDCDOutputFlowControl = false
-//	let RTS = false
-//	let DTR = false
-//	let CTS = false
-//	let DSR = false
-//	let DCD = false
+}
 
+extension SerialSettings: Equatable {
 
+	public static func == (lhs: SerialSettings, rhs: SerialSettings) -> Bool {
 
+		return
+			lhs.baudrate == rhs.baudrate &&
+			lhs.parity == rhs.parity &&
+			lhs.numberOfStopBits == rhs.numberOfStopBits &&
+
+			lhs.shouldEchoReceivedData == rhs.shouldEchoReceivedData &&
+
+			lhs.withRTSCTSFlowControl == rhs.withRTSCTSFlowControl &&
+			lhs.withDTRDSRFlowControl == rhs.withDTRDSRFlowControl &&
+			lhs.withDCDOutputFlowControl == rhs.withDCDOutputFlowControl &&
+
+			lhs.RTS == rhs.RTS &&
+			lhs.DTR == rhs.DTR &&
+			lhs.CTS == rhs.CTS &&
+			lhs.DSR == rhs.DSR &&
+			lhs.DCD == rhs.DCD
+
+	}
 }

@@ -4,15 +4,15 @@
 import PackageDescription
 
 let package = Package(
-	
-    name: "OpenSendCloseExample",
+
+    name: "ReadExample",
 
 	dependencies: [
 		.package(path: "../../../SwiftSerialport")
 	],
 
     targets: [
-        .target(name: "OpenSendCloseExample", dependencies: ["SwiftSerialport"]),
+        .target(name: "ReadExample", dependencies: ["SwiftSerialport"]),
     ]
     
 )

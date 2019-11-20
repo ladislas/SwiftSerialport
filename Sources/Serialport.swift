@@ -6,6 +6,8 @@
 //
 
 import Foundation
+import Darwin.POSIX.termios
+
 
 public class Serialport {
 
@@ -16,6 +18,7 @@ public class Serialport {
 	let path: String
 	var serialSettings: SerialSettings
 	var status: SerialStatus
+	let buffer: SerialBuffer
 
 	var originalOptions: termios?
 
@@ -23,17 +26,31 @@ public class Serialport {
 		return self.status == .open ? true : false
 	}
 
+	public var dataAvailable: Int32 {
+		guard let fd = self.fileDescriptor else {
+			print("not working")
+			return -1
+		}
+
+		return ioctl(fd, FIONREAD)
+	}
+
 	var fileDescriptor: Int32?
+
+	let queue = DispatchQueue.global(qos: .userInitiated)
+
+
 
 	//
 	// MARK: - Initialization
 	//
 
-	public init(path: String, withSettings settings: SerialSettings = SerialSettings()) {
+	public init(path: String, bufferLength length: Int = 1024, withSettings settings: SerialSettings = SerialSettings()) {
 
 		self.path = path
 		self.serialSettings = settings
 		self.status = .closed
+		self.buffer = SerialBuffer(length: length)
 
 	}
 
@@ -45,18 +62,18 @@ public class Serialport {
 
 		if self.isOpen { return }
 
-		// TODO
-//		let fd = Darwin.open(self.path.cString(using: String.Encoding.ascii)!, O_RDWR | O_NOCTTY | O_EXLOCK | O_NONBLOCK)
+		// see https://www.gnu.org/software/libc/manual/html_node/File-Status-Flags.html#File-Status-Flags
+		// for more information
 		let fd = Darwin.open(self.path, O_RDWR | O_NOCTTY | O_EXLOCK | O_NONBLOCK)
 
 		if fd < 1 {
 			print("ERROR - Port \"\(path)\" could not be open")
-			throw SerialError.portCannotBeOpened
+			throw SerialError.failedToOpenPort
 		}
 
 		if fcntl(fd, F_SETFL, 0) == -1 {
 			print("ERROR - Failed to clear O_NONBLOCK \(self.path) - \(String(describing: strerror(errno)))(\(errno)).\n")
-			throw SerialError.flagCannotBeCleared
+			throw SerialError.failedToClearNonblockFlag
 		}
 
 		self.fileDescriptor = fd
@@ -68,6 +85,7 @@ public class Serialport {
 
 		try? setup()
 
+		// TODO: try with and without that
 		var modemLines: Int32 = 0
 		if (ioctl(fd, TIOCMGET, &modemLines) < 0) {
 			print("ERROR - Failed to read modem lines status")
@@ -83,8 +101,42 @@ public class Serialport {
 
 	}
 
+	public func waitForData() {
+
+		queue.async {
+
+			guard let fd = self.fileDescriptor else {
+				return
+			}
+
+			while true {
+
+				let size = self.buffer.length
+				
+				var data = [UInt8](repeating: 0, count: size)
+
+				let bytesRead = Darwin.read(fd, &data, size)
+
+				self.buffer.append(array: data)
+
+				let str = String(data: self.buffer.data[0...bytesRead - 1], encoding: .utf8)
+				print(str!, terminator: "")
+
+			}
+
+		}
+
+	}
+
 	public func close() {
 
+		self.status = .closed
+
+		if let _ = self.fileDescriptor {
+			Darwin.close(self.fileDescriptor!)
+			self.fileDescriptor = nil
+			self.originalOptions = nil
+		}
 
 	}
 
@@ -102,9 +154,9 @@ public class Serialport {
 	public func setup() throws {
 
 		// TODO : remove or not the unwrapp
-//		if self.fileDescriptor < 1 { return }
+//		if let fd = self.fileDescriptor || self.fileDescriptor < Int32(1) {return}
 		guard let fd = self.fileDescriptor else {
-			print("ERROR - File descriptor is not valid")
+//			print("ERROR - File descriptor is not valid")
 			throw SerialError.invalidFileDescriptor
 		}
 
@@ -113,9 +165,13 @@ public class Serialport {
 
 		cfmakeraw(&options)
 
-		// Wait for at least 1 character before returning from read
+		/**
+		Setup VMIN and VTIME
+		see http://www.unixwiz.net/techtips/termios-vmin-vtime.html for more information
+		VMIN  = 1 --> Wait for at least 1 character before returning from read
+		VTIME = 2 --> Wait for 200 milliseconds after last byte before returning from read
+		*/
 		self.serialSettings.controlCharacters.VMIN = cc_t(1)
-		// Wait for 200 milliseconds after last byte before returning from read
 		self.serialSettings.controlCharacters.VTIME = cc_t(2)
 		options.c_cc = self.serialSettings.controlCharacters
 
@@ -125,9 +181,9 @@ public class Serialport {
 
 		options.parity = self.serialSettings.parity
 		options.numberOfStopBits = self.serialSettings.numberOfStopBits
-		options.usesRTSCTSFlowControl = self.serialSettings.usesRTSCTSFlowControl
-		options.usesDTRDSRFlowControl = self.serialSettings.usesDTRDSRFlowControl
-		options.usesDCDOutputFlowControl = self.serialSettings.usesDCDOutputFlowControl
+		options.withRTSCTSFlowControl = self.serialSettings.withRTSCTSFlowControl
+		options.withDTRDSRFlowControl = self.serialSettings.withDTRDSRFlowControl
+		options.withDCDOutputFlowControl = self.serialSettings.withDCDOutputFlowControl
 
 		options.c_cflag |= tcflag_t(HUPCL) // Turn on hangup on close
 		options.c_cflag |= tcflag_t(CLOCAL) // Set local mode on
@@ -139,8 +195,10 @@ public class Serialport {
 
 		let result = tcsetattr(fd, TCSANOW, &options)
 		if result != 0 {
-			throw SerialError.attributesCannotBeSet
+			throw SerialError.failedToSetAttributes
 		}
+
+		usleep(10000)
 
 	}
 
@@ -148,15 +206,76 @@ public class Serialport {
 	// MARK: - Write
 	//
 
-	public func write(byte: UInt8) {
+	@discardableResult
+	public func write(buffer: UnsafeRawPointer, size: Int) -> Int {
+
+		guard let fd = self.fileDescriptor else {
+			return -1
+		}
+
+		let bytesWritten = Darwin.write(fd, buffer, size)
+
+		if bytesWritten < 1 {
+			print("ERROR (\(bytesWritten)) - Failed to write UnsafeRawPointer")
+		}
+
+		return bytesWritten
 
 	}
 
-	public func write(array: [UInt8]) {
+	@discardableResult
+	public func write(byte: UInt8) -> Int {
+
+		var byte = byte
+		let bytesWritten = self.write(buffer: &byte, size: 1)
+
+		if bytesWritten < 1 {
+			print("ERROR (\(bytesWritten)) - Failed to write byte: \(byte)")
+		}
+
+		return bytesWritten
 
 	}
 
-	public func write(data: Data) {
+	@discardableResult
+	public func write(array: [UInt8]) -> Int {
+
+		let bytesWritten = self.write(buffer: array, size: array.count)
+
+		if bytesWritten < 1 {
+			print("ERROR (\(bytesWritten)) - Failed to write array: \(array)")
+		}
+
+		return bytesWritten
+
+	}
+
+	@discardableResult
+	public func write(data: Data) -> Int {
+
+		let size = data.count
+		let buffer = UnsafeMutablePointer<UInt8>.allocate(capacity: size)
+
+		defer {
+			buffer.deallocate()
+		}
+
+		data.copyBytes(to: buffer, count: size)
+
+		let bytesWritten = self.write(buffer: buffer, size: size)
+
+		return bytesWritten
+
+	}
+
+	@discardableResult
+	public func write(string: String) -> Int {
+
+		let data = Data(string.utf8)
+
+		let bytesWritten = self.write(data: data)
+
+		return bytesWritten
 
 	}
 

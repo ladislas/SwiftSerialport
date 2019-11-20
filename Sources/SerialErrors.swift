@@ -9,11 +9,17 @@ import Foundation
 
 public enum SerialError: Error {
 
+	case failedToOpenPort
+	case failedToClearNonblockFlag
+	case failedToSetAttributes
+
+	case invalidFileDescriptor
+
 	case pathNotFound
 
 	case portNotAvailable
 
-	case invalidFileDescriptor
+
 
 	case portCannotBeOpened
 
@@ -21,10 +27,9 @@ public enum SerialError: Error {
 
 	case failedToReadModemLines
 
-	case attributesCannotBeSet
 
 	case readNotPossible
 
-	case writeNotPossible
+	case writeFailed
 
 }

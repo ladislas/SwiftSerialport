@@ -36,7 +36,7 @@ extension io_object_t {
 		}
 	}
 
-	public func getInfo(andOutput output: Bool = false) -> SerialDevice_t? {
+	public func getInfo(andOutput output: Bool = false) -> SerialDevice? {
 
 		var score: Int32 = 0
 		var kr: kern_return_t = 0
@@ -158,10 +158,11 @@ extension io_object_t {
 
 		if let name = self.name() {
 
-
-			return (id: did, vendorId: vid, productId: pid, name: name, locationId: lid, vendorName: vendorName, serialNr: serialNr, bsdPath: bsdPath, deviceInterfacePtrPtr: deviceInterfacePtrPtr, plugInInterfacePtrPtr: plugInInterfacePtrPtr)
+			return SerialDevice(id: did, vendorId: vid, productId: pid, name: name, locationId: lid, vendorName: vendorName, serialNr: serialNr, bsdPath: bsdPath, deviceInterfacePtrPtr: deviceInterfacePtrPtr, plugInInterfacePtrPtr: plugInInterfacePtrPtr)
 
 		}
+
 		return nil
+
 	}
 }

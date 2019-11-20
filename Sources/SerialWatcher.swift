@@ -11,13 +11,15 @@ public class SerialWatcher {
 
 	private weak var delegate: SerialWatcherDelegate?
 	
-	private let notificationPort = IONotificationPortCreate(kIOMasterPortDefault)
+	private var notificationPort = IONotificationPortCreate(kIOMasterPortDefault)
 	private var addedIterator: io_iterator_t = 0
 	private var removedIterator: io_iterator_t = 0
 
-	public init(delegate: SerialWatcherDelegate) {
-
+	public init(delegate: SerialWatcherDelegate? = nil) {
 		self.delegate = delegate
+	}
+
+	public func start() {
 
 		func handleNotification(instance: UnsafeMutableRawPointer?, _ iterator: io_iterator_t) {
 			//the delay here is very important, because it gives the usb port time to set the bsp path for instance, this is sometimes needed.
@@ -36,7 +38,7 @@ public class SerialWatcher {
 					handler = watcher.delegate?.didRemove
 
 				default:
-					assertionFailure("received unexpected IOIterator")
+					assertionFailure("received unexpected IOIterator - \(iterator)")
 					return
 
 				}
@@ -68,6 +70,14 @@ public class SerialWatcher {
 
 		// Add the notification to the main run loop to receive future updates.
 		CFRunLoopAddSource(CFRunLoopGetMain(), IONotificationPortGetRunLoopSource(notificationPort).takeUnretainedValue(), .commonModes)
+
+	}
+
+	public func stop() {
+		CFRunLoopRemoveSource(CFRunLoopGetMain(), IONotificationPortGetRunLoopSource(notificationPort).takeUnretainedValue(), .commonModes)
+		notificationPort = IONotificationPortCreate(kIOMasterPortDefault)
+		addedIterator = 0
+		removedIterator = 0
 	}
 
 	deinit {
